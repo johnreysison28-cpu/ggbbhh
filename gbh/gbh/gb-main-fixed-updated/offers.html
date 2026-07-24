@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trade Offers — GameBarterHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/notification.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <style>
+    .offers-header {
+      padding: 40px 24px 20px;
+      max-width: 800px; margin: 0 auto;
+    }
+    .offers-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 2rem; font-weight: 700; margin-bottom: 6px;
+    }
+    .offers-subtitle { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 24px; }
+
+    .offers-tabs {
+      display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border);
+    }
+    .offers-tab {
+      padding: 10px 18px; background: none; border: none; cursor: pointer;
+      color: var(--text-secondary); font-family: 'Exo 2', sans-serif; font-weight: 600;
+      font-size: 0.85rem; border-bottom: 2px solid transparent; transition: all 0.2s;
+    }
+    .offers-tab:hover { color: var(--text-primary); }
+    .offers-tab.active { color: var(--accent-cyan); border-bottom-color: var(--accent-cyan); }
+    .offers-tab .count-chip {
+      display: inline-block; margin-left: 6px; background: rgba(0,229,255,0.12);
+      color: var(--accent-cyan); font-size: 0.68rem; font-weight: 700;
+      padding: 1px 7px; border-radius: 10px;
+    }
+
+    .offers-filter {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .offers-filter-btn {
+      padding: 5px 14px; border-radius: 20px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      font-family: 'Exo 2', sans-serif;
+    }
+    .offers-filter-btn:hover, .offers-filter-btn.active {
+      border-color: var(--accent-cyan); color: var(--accent-cyan); background: rgba(0,229,255,0.08);
+    }
+    .offers-list { max-width: 800px; margin: 0 auto; padding: 0 24px 60px; }
+  </style>
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5-g1bjXfgd1w9boHbfLX8EMnt6tr9yuM",
+      authDomain: "gbhub-25a16.firebaseapp.com",
+      projectId: "gbhub-25a16",
+      storageBucket: "gbhub-25a16.firebasestorage.app",
+      messagingSenderId: "1031854442872",
+      appId: "1:1031854442872:web:208bc4663cace89f43608d",
+      measurementId: "G-XV7WMV0Q82",
+      databaseURL: "https://gbhub-25a16-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  </script>
+</head>
+<body>
+
+<!-- Navbar injected by navbar-template.js -->
+
+<!-- ═══ MODAL (trade detail, opened when tapping an offer) ═══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Trade Details</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Edit Trade Overlay placeholder (needed by trades.js) -->
+<div id="editTradeOverlay" class="modal-overlay" onclick="if(event.target===this)closeEditTradeModal()"></div>
+
+<!-- ═══ PAGE CONTENT ═══ -->
+<div class="offers-header">
+  <div class="offers-title">🤝 Trade Offers</div>
+  <p class="offers-subtitle">Where trades actually happen — send, accept, and complete trade offers here.</p>
+
+  <div class="offers-tabs">
+    <button class="offers-tab active" id="tab-received" onclick="setOffersView('received')">📥 Received</button>
+    <button class="offers-tab" id="tab-sent" onclick="setOffersView('sent')">📤 Sent</button>
+  </div>
+
+  <div class="offers-filter" id="offersFilterBar">
+    <button class="offers-filter-btn active" onclick="setOffersFilter('all', this)">All</button>
+    <button class="offers-filter-btn" onclick="setOffersFilter('pending', this)">Pending</button>
+    <button class="offers-filter-btn" onclick="setOffersFilter('accepted', this)">In Progress</button>
+    <button class="offers-filter-btn" onclick="setOffersFilter('completed', this)">Completed</button>
+    <button class="offers-filter-btn" onclick="setOffersFilter('closed', this)">Declined/Cancelled</button>
+  </div>
+</div>
+
+<div class="offers-list" id="offersList">
+  <p style="color:var(--text-muted);padding:32px;text-align:center">Loading...</p>
+</div>
+
+<!-- ═══ SCRIPTS ═══ -->
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/notification.js"></script>
+<script src="js/navbar-template.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/trades.js"></script>
+<script src="js/offers.js"></script>
+<script>
+  let _offersView   = 'received';
+  let _offersFilter = 'all';
+  let _receivedOffers = [];
+  let _sentOffers     = [];
+
+  async function loadOffersPage() {
+    if (!state.currentUser) {
+      document.getElementById('offersList').innerHTML =
+        `<div class="empty-state"><div class="empty-state-icon">🔒</div><p>Please <a href="login.html" style="color:var(--accent-cyan)">sign in</a> to see your trade offers.</p></div>`;
+      return;
+    }
+    document.getElementById('offersList').innerHTML =
+      '<p style="color:var(--text-muted);padding:32px;text-align:center">Loading...</p>';
+    try {
+      [_receivedOffers, _sentOffers] = await Promise.all([loadOffersReceived(), loadOffersSent()]);
+    } catch (e) {
+      console.error('[loadOffersPage] failed:', e);
+      const isIndexError = e && (e.code === 'failed-precondition' || /index/i.test(e.message || ''));
+      document.getElementById('offersList').innerHTML = isIndexError
+        ? `<div class="empty-state">
+             <div class="empty-state-icon">⚠️</div>
+             <p>Firestore is missing a required index for Trade Offers.</p>
+             <p style="margin-top:8px;font-size:0.8rem;color:var(--text-muted)">
+               Open the browser console (F12) — Firestore prints a direct link there to auto-create the missing index.
+               Click it, wait ~1-2 minutes for it to finish building, then reload this page.
+             </p>
+           </div>`
+        : `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Could not load offers.</p><p style="margin-top:8px;font-size:0.8rem;color:var(--text-muted)">${escapeHtml(e && e.message || 'Unknown error')}</p></div>`;
+      showToast('Could not load offers.', 'error');
+      return;
+    }
+    updateTabCounts();
+    renderOffersPage();
+  }
+
+  function updateTabCounts() {
+    const pendingReceived = _receivedOffers.filter(o => o.status === 'pending').length;
+    const tabR = document.getElementById('tab-received');
+    const tabS = document.getElementById('tab-sent');
+    tabR.innerHTML = `📥 Received${pendingReceived ? ` <span class="count-chip">${pendingReceived}</span>` : ''}`;
+    tabS.innerHTML = `📤 Sent${_sentOffers.length ? ` <span class="count-chip">${_sentOffers.length}</span>` : ''}`;
+  }
+
+  function setOffersView(view) {
+    _offersView = view;
+    document.getElementById('tab-received').classList.toggle('active', view === 'received');
+    document.getElementById('tab-sent').classList.toggle('active', view === 'sent');
+    renderOffersPage();
+  }
+
+  function setOffersFilter(f, el) {
+    _offersFilter = f;
+    document.querySelectorAll('.offers-filter-btn').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    renderOffersPage();
+  }
+
+  function renderOffersPage() {
+    if (typeof closeAllInlineChats === 'function') closeAllInlineChats();
+    let list = _offersView === 'received' ? _receivedOffers : _sentOffers;
+    if (_offersFilter === 'closed') list = list.filter(o => o.status === 'declined' || o.status === 'cancelled');
+    else if (_offersFilter !== 'all') list = list.filter(o => o.status === _offersFilter);
+
+    const el = document.getElementById('offersList');
+    if (!list.length) {
+      const emptyMsg = _offersView === 'received' ? 'No offers received yet.' : "You haven't sent any trade offers yet.";
+      el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🤝</div><p>${emptyMsg}</p>${_offersView === 'sent' ? `<p style="margin-top:10px"><a href="browse.html" style="color:var(--accent-cyan)">Browse trades</a> to send your first offer.</p>` : ''}</div>`;
+      return;
+    }
+    el.innerHTML = list.map(o => offerCardHTML(o, _offersView)).join('');
+  }
+
+  (async () => {
+    await restoreSession();
+    await loadOffersPage();
+  })();
+</script>
+</body>
+</html>

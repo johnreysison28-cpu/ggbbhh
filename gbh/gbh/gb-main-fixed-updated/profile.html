@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile — GameBarterHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/notification.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/profile.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5-g1bjXfgd1w9boHbfLX8EMnt6tr9yuM",
+      authDomain: "gbhub-25a16.firebaseapp.com",
+      projectId: "gbhub-25a16",
+      storageBucket: "gbhub-25a16.firebasestorage.app",
+      messagingSenderId: "1031854442872",
+      appId: "1:1031854442872:web:208bc4663cace89f43608d",
+      measurementId: "G-XV7WMV0Q82"
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  </script>
+</head>
+<body>
+
+<!-- Navbar injected by navbar-template.js -->
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Trade Details</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="profile-wrapper">
+
+  <!-- Banner + Avatar + Info -->
+  <div class="profile-banner"></div>
+  <div class="profile-info">
+    <div class="profile-avatar-wrap">
+      <div class="profile-avatar" id="profileAvatarEl">?</div>
+      <div style="padding-bottom:8px">
+        <div class="profile-name"  id="profileNameEl">—</div>
+        <div class="profile-loc"   id="profileLocEl"></div>
+        <div class="profile-email" id="profileEmailEl"></div>
+        <div class="profile-email" id="profilePhoneEl"></div>
+        <div class="profile-email" id="profileDobEl"></div>
+        <div class="profile-email" id="profileKycEl"></div>
+      </div>
+      <div style="margin-left:auto;padding-bottom:8px">
+        <button class="btn btn-ghost" onclick="showEditModal()"
+          style="font-size:0.8rem;padding:7px 16px">✏️ Edit Profile</button>
+      </div>
+    </div>
+    <div style="height:48px"></div>
+    <div class="profile-stats">
+      <div class="pstat"><div class="pstat-val" id="pstatPosts">0</div><div class="pstat-lbl">Posts</div></div>
+      <div class="pstat"><div class="pstat-val" id="pstatLikes">0</div><div class="pstat-lbl">Likes Received</div></div>
+      <div class="pstat"><div class="pstat-val" id="pstatFollowers">0</div><div class="pstat-lbl">Followers</div></div>
+      <div class="pstat"><div class="pstat-val" id="pstatFollowing">0</div><div class="pstat-lbl">Following</div></div>
+    </div>
+  </div>
+
+  <!-- My Trades -->
+  <div class="section-title" style="margin-bottom:18px">My Trade Posts</div>
+  <div class="trades-grid" id="myTradesGrid"></div>
+
+  <!-- New Post CTA -->
+  <div style="text-align:center;margin-top:32px;padding-bottom:40px">
+    <a href="post-trade.html" class="btn btn-orange" style="padding:12px 32px;font-size:0.95rem">
+      ➕ Post a New Trade
+    </a>
+  </div>
+
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal-overlay" id="editModalOverlay" onclick="closeEditModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Profile</div>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div id="editModalBody">
+      <!-- Avatar upload -->
+      <div class="form-group" style="text-align:center">
+        <label class="form-label">Profile Photo</label>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+          <div id="editAvatarPreview" style="
+            width:72px;height:72px;border-radius:50%;
+            background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));
+            display:flex;align-items:center;justify-content:center;
+            font-size:1.6rem;font-weight:700;color:#0a0e1a;
+            overflow:hidden;cursor:pointer;border:2px solid var(--accent-cyan);
+          " onclick="document.getElementById('editAvatarInput').click()"></div>
+          <button class="btn btn-ghost" style="font-size:0.78rem;padding:6px 14px"
+            onclick="document.getElementById('editAvatarInput').click()">Change Photo</button>
+          <input type="file" id="editAvatarInput" accept="image/*" style="display:none"
+            onchange="previewEditAvatar(this)">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Display Name</label>
+        <input class="form-input" id="editName" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Location</label>
+        <input class="form-input" id="editLoc" type="text" placeholder="City, Country">
+      </div>
+      <button class="btn btn-primary full-btn" onclick="saveProfile()" style="margin-top:8px;padding:12px">
+        Save Changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Trade Overlay (populated dynamically by trades.js) -->
+<div id="editTradeOverlay" class="modal-overlay" onclick="if(event.target===this)closeEditTradeModal()"></div>
+
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/notification.js"></script>
+<script src="js/navbar-template.js"></script>
+<script src="js/trades.js"></script>
+<script src="js/offers.js"></script>
+<script>
+  let _newAvatarDataURL = null;
+
+  async function initProfile() {
+    await restoreSession();
+    if (!state.currentUser) { window.location.href = 'login.html'; return; }
+    if (typeof startNotifListener === 'function') startNotifListener();
+    await renderProfile();
+  }
+
+  async function renderProfile() {
+    const u = state.currentUser;
+    const av = document.getElementById('profileAvatarEl');
+    if (u.avatar) av.innerHTML = `<img src="${u.avatar}" alt="">`;
+    else          av.textContent = u.name[0].toUpperCase();
+
+    document.getElementById('profileNameEl').textContent  = u.name;
+    document.getElementById('profileLocEl').textContent   = u.location ? '📍 ' + u.location : '';
+    document.getElementById('profileEmailEl').textContent = '✉️ ' + u.email;
+    document.getElementById('profilePhoneEl').textContent = u.phone ? '📱 ' + u.phone : '';
+    document.getElementById('profileDobEl').textContent   = u.dob
+      ? '🎂 ' + new Date(u.dob + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
+    const kycEl = document.getElementById('profileKycEl');
+    if (u.verificationStatus === 'verified') {
+      kycEl.textContent = '✅ Verified Account';
+      kycEl.style.color = '#2ecc71';
+    } else if (u.verificationStatus === 'pending') {
+      kycEl.textContent = '⏳ Verification Pending Review';
+      kycEl.style.color = '#f5a623';
+    } else if (u.verificationStatus === 'rejected') {
+      kycEl.textContent = '⚠️ Verification Rejected' + (u.rejectionReason ? ' — ' + u.rejectionReason : '');
+      kycEl.style.color = '#ff4d6d';
+    } else {
+      kycEl.textContent = '';
+    }
+
+    try {
+      const myTrades = await apiGet('/trades/user/' + encodeURIComponent(u.email));
+      state.trades   = myTrades;
+      const totalLikes = myTrades.reduce((s, t) => s + (t.likes || 0), 0);
+      document.getElementById('pstatPosts').textContent = myTrades.length;
+      document.getElementById('pstatLikes').textContent = totalLikes;
+      // Load followers/following counts
+      try {
+        const db = firebase.firestore();
+        const snap = await db.collection('users').doc(u.uid).get();
+        if (snap.exists) {
+          const data = snap.data();
+          document.getElementById('pstatFollowers').textContent = (data.followers || []).length;
+          document.getElementById('pstatFollowing').textContent = (data.following || []).length;
+        }
+      } catch (_) {}
+      renderMyTrades();
+    } catch (_) {}
+  }
+
+  function renderMyTrades() {
+    document.getElementById('myTradesGrid').innerHTML = state.trades.length
+      ? state.trades.map(t => tradeCardHTML(t, true)).join('')
+      : `<div class="empty-state">
+           <div class="empty-state-icon">📦</div>
+           <p>You haven't posted any trades yet.<br>
+              <a href="post-trade.html" style="color:var(--accent-cyan)">Create your first post →</a>
+           </p>
+         </div>`;
+  }
+
+  function showEditModal() {
+    const u = state.currentUser;
+    _newAvatarDataURL = null;
+    document.getElementById('editName').value = u.name;
+    document.getElementById('editLoc').value  = u.location || '';
+
+    const prev = document.getElementById('editAvatarPreview');
+    if (u.avatar) prev.innerHTML = `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover" alt="">`;
+    else          prev.textContent = u.name[0].toUpperCase();
+
+    document.getElementById('editModalOverlay').classList.add('open');
+  }
+
+  function previewEditAvatar(input) {
+    if (!input.files[0]) return;
+    const r = new FileReader();
+    r.onload = e => {
+      _newAvatarDataURL = e.target.result;
+      const prev = document.getElementById('editAvatarPreview');
+      prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover" alt="">`;
+    };
+    r.readAsDataURL(input.files[0]);
+  }
+
+  function closeEditModal(e) {
+    if (e && e.target !== document.getElementById('editModalOverlay')) return;
+    document.getElementById('editModalOverlay').classList.remove('open');
+  }
+
+  async function saveProfile() {
+    const name = document.getElementById('editName').value.trim();
+    const loc  = document.getElementById('editLoc').value.trim();
+    if (!name) { showToast('Name cannot be empty', 'error'); return; }
+
+    try {
+      const { user } = await apiPut('/auth/profile', {
+        name, location: loc,
+        avatar: _newAvatarDataURL || state.currentUser.avatar || null,
+      });
+      state.currentUser = user;
+      document.getElementById('editModalOverlay').classList.remove('open');
+      showToast('✅ Profile updated!');
+      renderProfile();
+      updateNavUser();
+      _newAvatarDataURL = null;
+    } catch (e) {
+      showToast(e.message || 'Could not save profile.', 'error');
+    }
+  }
+
+  initProfile();
+</script>
+</body>
+</html>

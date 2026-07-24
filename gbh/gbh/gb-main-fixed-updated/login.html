@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — GameBarterHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/notification.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5-g1bjXfgd1w9boHbfLX8EMnt6tr9yuM",
+      authDomain: "gbhub-25a16.firebaseapp.com",
+      projectId: "gbhub-25a16",
+      storageBucket: "gbhub-25a16.firebasestorage.app",
+      messagingSenderId: "1031854442872",
+      appId: "1:1031854442872:web:208bc4663cace89f43608d",
+      measurementId: "G-XV7WMV0Q82"
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  </script>
+</head>
+<body>
+
+<!-- Navbar injected by navbar-template.js -->
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <a class="auth-logo" href="index.html">GAME<span>BARTERHUB</span></a>
+    <div class="auth-title">Welcome Back</div>
+    <div class="auth-sub">Sign in to continue trading</div>
+
+    <div class="error-msg" id="loginError"></div>
+
+    <div class="form-group">
+      <label class="form-label">Email Address</label>
+      <input class="form-input" id="loginEmail" placeholder="you@example.com" type="email">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="loginPass" placeholder="Your password" type="password"
+        onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+
+    <button class="btn btn-primary full-btn" onclick="doLogin()" style="margin-top:8px;padding:12px">
+      Sign In
+    </button>
+
+    <div style="text-align:center;margin-top:10px">
+      <a href="#" onclick="openForgotModal();return false;" style="color:var(--accent-cyan);font-size:0.82rem;text-decoration:none;"></a>
+    </div>
+
+    <div style="text-align:center;margin-top:8px">
+      <small style="color:var(--text-muted)">Demo: register an account first, then log in</small>
+    </div>
+
+    <div class="auth-switch">
+      Don't have an account? <a href="register.html">Sign up free</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FORGOT PASSWORD MODAL ═══ -->
+<div id="forgotOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:28px 24px;width:100%;max-width:400px;margin:0 16px;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+    <div style="font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px">🔑 Reset Password</div>
+
+    <!-- Step 1: Enter email -->
+    <div id="fgStep1">
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px">Enter the email address linked to your account. Firebase will send you a password reset link.</p>
+      <div class="error-msg" id="fgError1"></div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input class="form-input" id="fgEmail" type="email" placeholder="you@example.com"
+          onkeydown="if(event.key==='Enter') sendResetCode()">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn btn-ghost" onclick="closeForgotModal()" style="flex:1">Cancel</button>
+        <button class="btn btn-primary" onclick="sendResetCode()" style="flex:2;padding:11px">Send Reset Email</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Confirmation -->
+    <div id="fgStep2" style="display:none">
+      <div style="text-align:center;padding:16px 0">
+        <div style="font-size:2.5rem;margin-bottom:12px">📧</div>
+        <p style="font-size:0.9rem;color:var(--text-primary);margin-bottom:8px">Reset email sent!</p>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:4px">
+          Check your inbox at <b id="fgEmailDisplay" style="color:var(--accent-cyan)"></b> for a password reset link from Firebase.
+        </p>
+        <p style="font-size:0.75rem;color:var(--text-muted)">Check your spam folder if you don't see it.</p>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn btn-primary" onclick="closeForgotModal()" style="flex:1;padding:11px">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/notification.js"></script>
+<script src="js/navbar-template.js"></script>
+<script src="js/offers.js"></script>
+<script>
+  // Redirect if already logged in
+  if (state.currentUser) window.location.href = 'index.html';
+
+  function openForgotModal() {
+    document.getElementById('fgEmail').value = '';
+    const err = document.getElementById('fgError1');
+    if (err) { err.style.display = 'none'; err.textContent = ''; }
+    document.getElementById('fgStep1').style.display = 'block';
+    document.getElementById('fgStep2').style.display = 'none';
+    document.getElementById('forgotOverlay').style.display = 'flex';
+  }
+
+  function closeForgotModal() {
+    document.getElementById('forgotOverlay').style.display = 'none';
+  }
+
+  // Close on background click
+  document.getElementById('forgotOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeForgotModal();
+  });
+</script>
+</body>
+</html>

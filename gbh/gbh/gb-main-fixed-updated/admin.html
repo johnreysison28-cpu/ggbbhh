@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Verification Review — GameBarterHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/notification.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5-g1bjXfgd1w9boHbfLX8EMnt6tr9yuM",
+      authDomain: "gbhub-25a16.firebaseapp.com",
+      projectId: "gbhub-25a16",
+      storageBucket: "gbhub-25a16.firebasestorage.app",
+      messagingSenderId: "1031854442872",
+      appId: "1:1031854442872:web:208bc4663cace89f43608d",
+      measurementId: "G-XV7WMV0Q82"
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  </script>
+  <style>
+    .admin-wrapper { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
+    .admin-header { margin-bottom: 24px; }
+    .admin-header h1 { font-family: 'Rajdhani', sans-serif; font-size: 1.8rem; font-weight: 700; }
+    .admin-header p  { color: var(--text-secondary); font-size: 0.88rem; margin-top: 4px; }
+
+    .admin-tabs { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+    .admin-tab {
+      background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary);
+      padding: 8px 16px; border-radius: 999px; font-size: 0.82rem; cursor: pointer;
+    }
+    .admin-tab.active { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+
+    .kyc-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 20px; margin-bottom: 16px;
+    }
+    .kyc-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+    .kyc-user-name { font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; font-weight: 700; }
+    .kyc-meta { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+    .kyc-status {
+      font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+      text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;
+    }
+    .kyc-status.pending  { background: rgba(245,166,35,0.15); color: #f5a623; }
+    .kyc-status.verified { background: rgba(46,204,113,0.15); color: #2ecc71; }
+    .kyc-status.rejected { background: rgba(255,77,109,0.15); color: #ff4d6d; }
+
+    .kyc-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 16px; margin: 14px 0; font-size: 0.82rem; }
+    .kyc-details b { color: var(--text-secondary); font-weight: 600; display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px; }
+
+    .kyc-images { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; }
+    .kyc-image-box { text-align: center; }
+    .kyc-image-box img {
+      width: 180px; height: 120px; object-fit: cover; border-radius: var(--radius);
+      border: 1px solid var(--border); cursor: zoom-in; background: var(--bg-input);
+    }
+    .kyc-image-box .selfie-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; }
+    .kyc-image-box span { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; }
+
+    .kyc-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .kyc-actions .btn { padding: 9px 18px; font-size: 0.82rem; }
+    .btn-approve { background: #2ecc71; color: #04140b; border: none; font-weight: 700; border-radius: var(--radius); cursor: pointer; }
+    .btn-approve:hover { background: #29b765; }
+    .btn-reject { background: transparent; color: #ff4d6d; border: 1px solid #ff4d6d; font-weight: 700; border-radius: var(--radius); cursor: pointer; }
+    .btn-reject:hover { background: rgba(255,77,109,0.1); }
+
+    .admin-denied { text-align: center; padding: 80px 20px; }
+    .admin-denied .icon { font-size: 3rem; margin-bottom: 14px; }
+
+    .img-lightbox {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      z-index: 999; align-items: center; justify-content: center; cursor: zoom-out;
+    }
+    .img-lightbox.open { display: flex; }
+    .img-lightbox img { max-width: 90vw; max-height: 90vh; border-radius: var(--radius); }
+  </style>
+</head>
+<body>
+
+<!-- Navbar injected by navbar-template.js -->
+
+<div class="admin-wrapper" id="adminWrapper" style="display:none">
+  <div class="admin-header">
+    <h1>🛡️ Verification Review</h1>
+    <p>Review submitted IDs and selfies, then approve or reject each account.</p>
+  </div>
+
+  <div class="admin-tabs">
+    <button class="admin-tab active" data-status="pending"  onclick="setAdminTab('pending', this)">Pending</button>
+    <button class="admin-tab"        data-status="verified" onclick="setAdminTab('verified', this)">Verified</button>
+    <button class="admin-tab"        data-status="rejected" onclick="setAdminTab('rejected', this)">Rejected</button>
+  </div>
+
+  <div id="kycList"></div>
+</div>
+
+<div class="admin-denied" id="adminDenied" style="display:none">
+  <div class="icon">🚫</div>
+  <div class="profile-name" style="font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700">Admins only</div>
+  <p style="color:var(--text-secondary);margin-top:8px">You don't have access to this page.</p>
+</div>
+
+<div class="img-lightbox" id="imgLightbox" onclick="closeLightbox()">
+  <img id="imgLightboxImg" src="" alt="">
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/notification.js"></script>
+<script src="js/navbar-template.js"></script>
+<script>
+  let _adminTab = 'pending';
+
+  async function initAdmin() {
+    await restoreSession();
+    if (!state.currentUser) { window.location.href = 'login.html'; return; }
+
+    const admin = await isCurrentUserAdmin();
+    if (!admin) {
+      document.getElementById('adminDenied').style.display = 'block';
+      return;
+    }
+    document.getElementById('adminWrapper').style.display = 'block';
+    await loadKycList();
+  }
+
+  function setAdminTab(status, tabEl) {
+    _adminTab = status;
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    if (tabEl) tabEl.classList.add('active');
+    loadKycList();
+  }
+
+  async function loadKycList() {
+    const listEl = document.getElementById('kycList');
+    listEl.innerHTML = `<div class="empty-state"><p>Loading…</p></div>`;
+
+    const db = firebase.firestore();
+    const snap = await db.collection('users').where('verificationStatus', '==', _adminTab).get();
+
+    if (snap.empty) {
+      const msgs = {
+        pending:  'No pending verification requests right now.',
+        verified: 'No verified accounts yet.',
+        rejected: 'No rejected requests.',
+      };
+      listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><p>${msgs[_adminTab]}</p></div>`;
+      return;
+    }
+
+    const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Fetch the matching KYC artifacts (ID photo + selfie) for each user.
+    const withKyc = await Promise.all(users.map(async u => {
+      let kyc = null;
+      try {
+        const kycSnap = await db.collection('faceVerifications').doc(u.id).get();
+        if (kycSnap.exists) kyc = kycSnap.data();
+      } catch (_) {}
+      return { ...u, kyc };
+    }));
+
+    listEl.innerHTML = withKyc.map(u => kycCardHTML(u)).join('');
+  }
+
+  function kycCardHTML(u) {
+    const kyc = u.kyc || {};
+    const submitted = u.verificationSubmittedAt && u.verificationSubmittedAt.toDate
+      ? u.verificationSubmittedAt.toDate().toLocaleString()
+      : '—';
+
+    return `
+    <div class="kyc-card">
+      <div class="kyc-card-top">
+        <div>
+          <div class="kyc-user-name">${escapeHtml(u.name || 'Unnamed user')}</div>
+          <div class="kyc-meta">✉️ ${escapeHtml(u.email || '')}${u.phone ? ' &middot; 📱 ' + escapeHtml(u.phone) : ''}</div>
+        </div>
+        <span class="kyc-status ${u.verificationStatus}">${u.verificationStatus}</span>
+      </div>
+
+      <div class="kyc-details">
+        <div><b>Date of Birth</b>${u.dob ? escapeHtml(u.dob) : '—'}</div>
+        <div><b>ID Type</b>${escapeHtml(u.idType || kyc.idType || '—')}</div>
+        <div><b>ID Number</b>${escapeHtml(kyc.idNumber || '—')}</div>
+        <div><b>Submitted</b>${submitted}</div>
+        ${u.rejectionReason ? `<div><b>Rejection Reason</b>${escapeHtml(u.rejectionReason)}</div>` : ''}
+      </div>
+
+      <div class="kyc-images">
+        <div class="kyc-image-box">
+          <img src="${kyc.idPhoto || ''}" alt="ID photo" onclick="openLightbox('${(kyc.idPhoto || '').replace(/'/g, "\\'")}')">
+          <span>Valid ID</span>
+        </div>
+        <div class="kyc-image-box">
+          <img class="selfie-img" src="${kyc.photo || ''}" alt="Selfie" onclick="openLightbox('${(kyc.photo || '').replace(/'/g, "\\'")}')">
+          <span>Selfie</span>
+        </div>
+      </div>
+
+      ${_adminTab === 'pending' ? `
+      <div class="kyc-actions">
+        <button class="btn-approve" onclick="approveUser('${u.id}')">✅ Approve</button>
+        <button class="btn-reject" onclick="rejectUser('${u.id}')">✖️ Reject</button>
+      </div>` : ''}
+    </div>`;
+  }
+
+  function openLightbox(src) {
+    if (!src) return;
+    document.getElementById('imgLightboxImg').src = src;
+    document.getElementById('imgLightbox').classList.add('open');
+  }
+  function closeLightbox() {
+    document.getElementById('imgLightbox').classList.remove('open');
+  }
+
+  async function approveUser(uid) {
+    if (!confirm('Approve this account? A verified badge will appear on their profile and they will be notified.')) return;
+    const db = firebase.firestore();
+    try {
+      await db.collection('users').doc(uid).update({
+        verificationStatus: 'verified',
+        kycVerified: true,
+        verifiedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        verifiedBy: state.currentUser.uid,
+        rejectionReason: firebase.firestore.FieldValue.delete(),
+      });
+      await db.collection('notifications').add({
+        userId:    uid,
+        type:      'verification_approved',
+        title:     'Your account has been verified! ✅',
+        body:      'Your identity verification was approved. A verified badge now appears on your profile.',
+        is_read:   false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      showToast('✅ User approved and notified');
+      loadKycList();
+    } catch (e) {
+      showToast(e.message || 'Could not approve user.', 'error');
+    }
+  }
+
+  async function rejectUser(uid) {
+    const reason = prompt('Reason for rejection (shown to the user):', 'The submitted ID photo was unclear. Please resubmit.');
+    if (reason === null) return; // cancelled
+    const db = firebase.firestore();
+    try {
+      await db.collection('users').doc(uid).update({
+        verificationStatus: 'rejected',
+        kycVerified: false,
+        verifiedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        verifiedBy: state.currentUser.uid,
+        rejectionReason: reason || 'Not specified.',
+      });
+      await db.collection('notifications').add({
+        userId:    uid,
+        type:      'verification_rejected',
+        title:     'Your verification was not approved',
+        body:      reason || 'Please contact support for details.',
+        is_read:   false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      showToast('User rejected and notified');
+      loadKycList();
+    } catch (e) {
+      showToast(e.message || 'Could not reject user.', 'error');
+    }
+  }
+
+  // Safe escapeHtml fallback (also defined in notification.js)
+  if (typeof escapeHtml !== 'function') {
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  }
+
+  initAdmin();
+</script>
+</body>
+</html>

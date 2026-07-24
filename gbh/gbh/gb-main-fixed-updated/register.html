@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account — GameBarterHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/notification.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5-g1bjXfgd1w9boHbfLX8EMnt6tr9yuM",
+      authDomain: "gbhub-25a16.firebaseapp.com",
+      projectId: "gbhub-25a16",
+      storageBucket: "gbhub-25a16.firebasestorage.app",
+      messagingSenderId: "1031854442872",
+      appId: "1:1031854442872:web:208bc4663cace89f43608d",
+      measurementId: "G-XV7WMV0Q82"
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  </script>
+</head>
+<body>
+
+<!-- Navbar injected by navbar-template.js -->
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <a class="auth-logo" href="index.html">GAME<span>BARTERHUB</span></a>
+    <div class="auth-title">Create Account</div>
+    <div class="auth-sub">Join thousands of traders worldwide</div>
+
+    <div class="error-msg"   id="regError"></div>
+    <div class="success-msg" id="regSuccess"></div>
+
+    <!-- Avatar Upload -->
+    <div class="avatar-upload">
+      <div class="avatar-preview" id="regAvatarPreview"
+        onclick="document.getElementById('regAvatarInput').click()">👤</div>
+      <div class="avatar-upload-info">
+        <button class="btn btn-ghost" style="font-size:0.78rem;padding:6px 14px"
+          onclick="document.getElementById('regAvatarInput').click()">Upload Photo</button>
+        <p>JPG, PNG. Max 2MB</p>
+      </div>
+      <input type="file" id="regAvatarInput" accept="image/*" style="display:none"
+        onchange="previewAvatar(this)">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Full Name *</label>
+        <input class="form-input" id="regName" placeholder="Your name" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Location</label>
+        <select class="form-input" id="regState" onchange="onPHStateChange()">
+          <option value="">Select state / province</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">City</label>
+      <select class="form-input" id="regLocation" disabled>
+        <option value="">Select Location first</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Email Address *</label>
+      <input class="form-input" id="regEmail" placeholder="you@example.com" type="email">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Date of Birth *</label>
+        <input class="form-input" id="regDob" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mobile Number *</label>
+        <input class="form-input" id="regPhone" placeholder="09XX XXX XXXX" type="tel">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Password *</label>
+        <input class="form-input" id="regPass" placeholder="Min. 6 characters" type="password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password *</label>
+        <input class="form-input" id="regPass2" placeholder="Repeat password" type="password">
+      </div>
+    </div>
+
+    <!-- ── Identity Verification (GCash-style KYC fields) ── -->
+    <div class="form-group" style="margin-top:6px">
+      <label class="form-label" style="display:flex;align-items:center;gap:6px">
+        🛡️ Identity Verification
+      </label>
+      <p style="font-size:0.78rem;color:var(--text-secondary);margin:-4px 0 12px">
+        Required to buy, sell, and trade on GameBarterHub — same as verifying a GCash account.
+      </p>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Valid ID Type *</label>
+        <select class="form-input" id="regIdType">
+          <option value="">Select ID type</option>
+          <option value="Philippine Passport">Philippine Passport</option>
+          <option value="Driver's License">Driver's License</option>
+          <option value="PhilSys National ID">PhilSys National ID</option>
+          <option value="UMID">UMID</option>
+          <option value="Postal ID">Postal ID</option>
+          <option value="Voter's ID">Voter's ID</option>
+          <option value="PRC ID">PRC ID</option>
+          <option value="SSS ID">SSS ID</option>
+          <option value="TIN ID">TIN ID</option>
+          <option value="NATIONAL ID">NATIONAL ID</option>
+          <option value="OTHERS ID">OTHERS ID</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ID Number *</label>
+        <input class="form-input" id="regIdNumber" placeholder="As shown on your ID" type="text">
+      </div>
+    </div>
+
+    <button class="btn btn-primary full-btn" onclick="doRegister()"
+      style="margin-top:8px;padding:12px">Create Account</button>
+
+    <div class="auth-switch">
+      Already have an account? <a href="login.html">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     Face Verification Modal
+     Shown after the form fields are validated,
+     before the account is actually created.
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="faceScanOverlay">
+  <div class="modal" style="max-width:440px;text-align:center">
+    <div class="modal-header">
+      <div class="modal-title">Identity Verification</div>
+      <button class="modal-close" onclick="closeFaceScanModal()">✕</button>
+    </div>
+
+    <!-- Step indicator -->
+    <div class="kyc-steps">
+      <div class="kyc-step" id="kycStepDotId"><span>1</span>Valid ID</div>
+      <div class="kyc-step-line"></div>
+      <div class="kyc-step" id="kycStepDotSelfie"><span>2</span>Selfie</div>
+      <div class="kyc-step-line"></div>
+      <div class="kyc-step" id="kycStepDotReview"><span>3</span>Review</div>
+    </div>
+
+    <div class="error-msg" id="faceScanError" style="text-align:left"></div>
+
+    <!-- ── STEP 1: Capture / upload the valid ID ── -->
+    <div id="kycIdStep">
+      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:14px">
+        Take a clear photo of the front of the <b id="kycIdTypeLabel">valid ID</b> you entered above.
+        Make sure all details are readable and there's no glare.
+      </p>
+
+      <div class="id-scan-frame" id="idScanFrame">
+        <video id="idScanVideo" autoplay playsinline muted style="display:none"></video>
+        <img id="idScanPhoto" alt="Captured ID" style="display:none">
+        <div class="id-scan-placeholder" id="idScanPlaceholder">🪪<br>No photo yet</div>
+      </div>
+      <canvas id="idScanCanvas" style="display:none"></canvas>
+
+      <div id="idScanIdleActions" style="margin-top:16px;display:flex;gap:10px">
+        <button class="btn btn-primary full-btn" style="padding:12px" onclick="startIdScan()">
+          📷 Use Camera
+        </button>
+        <button class="btn btn-ghost full-btn" style="padding:12px" onclick="document.getElementById('idPhotoInput').click()">
+          📁 Upload File
+        </button>
+        <input type="file" id="idPhotoInput" accept="image/*" style="display:none" onchange="handleIdPhotoUpload(this)">
+      </div>
+
+      <div id="idScanLiveActions" style="margin-top:16px;display:none">
+        <button class="btn btn-primary full-btn" style="padding:12px" onclick="captureIdPhoto()">
+          Capture ID Photo
+        </button>
+      </div>
+
+      <div id="idScanReviewActions" style="margin-top:16px;display:none;flex-direction:column">
+        <button class="btn btn-primary full-btn" style="padding:12px" onclick="confirmIdPhoto()">
+          Next: Take Selfie →
+        </button>
+        <button class="btn btn-ghost full-btn" style="padding:10px;margin-top:10px" onclick="retakeIdPhoto()">
+          🔄 Retake
+        </button>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: Selfie / face scan (liveness) ── -->
+    <div id="kycSelfieStep" style="display:none">
+      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px">
+        Now scan your face so we can match it to your ID. Center your face in the frame,
+        make sure you're in good lighting, and remove sunglasses or masks.
+      </p>
+
+      <div class="face-scan-frame" id="faceScanFrame">
+        <video id="faceScanVideo" autoplay playsinline muted></video>
+        <img id="faceScanPhoto" alt="Captured selfie" style="display:none">
+        <div class="face-scan-ring"></div>
+      </div>
+      <canvas id="faceScanCanvas" style="display:none"></canvas>
+
+      <div id="faceScanIdleActions" style="margin-top:18px">
+        <button class="btn btn-primary full-btn" style="padding:12px" onclick="startFaceScan()">
+          📷 Enable Camera
+        </button>
+      </div>
+
+      <div id="faceScanLiveActions" style="margin-top:18px">
+        <button class="btn btn-primary full-btn" style="padding:12px" onclick="captureFacePhoto()">
+          Capture Photo
+        </button>
+      </div>
+
+      <div id="faceScanReviewActions" style="margin-top:18px;flex-direction:column">
+        <button class="btn btn-primary full-btn" style="padding:12px" onclick="confirmFacePhoto()">
+          Next: Review →
+        </button>
+        <button class="btn btn-ghost full-btn" style="padding:10px;margin-top:10px" onclick="retakeFacePhoto()">
+          🔄 Retake Photo
+        </button>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: Review both captures, then submit ── -->
+    <div id="kycReviewStep" style="display:none">
+      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:14px">
+        Please confirm these details match before we create your account.
+      </p>
+      <div style="display:flex;gap:14px;justify-content:center;margin-bottom:10px">
+        <div>
+          <div class="kyc-review-thumb"><img id="kycReviewIdImg" alt="ID"></div>
+          <div class="kyc-review-caption">Valid ID</div>
+        </div>
+        <div>
+          <div class="kyc-review-thumb round"><img id="kycReviewSelfieImg" alt="Selfie"></div>
+          <div class="kyc-review-caption">Selfie</div>
+        </div>
+      </div>
+      <div class="kyc-review-summary" id="kycReviewSummary"></div>
+
+      <div style="margin-top:18px;display:flex;flex-direction:column">
+        <button class="btn btn-primary full-btn" style="padding:12px" onclick="finishRegistration()">
+          ✅ Confirm &amp; Create Account
+        </button>
+        <button class="btn btn-ghost full-btn" style="padding:10px;margin-top:10px" onclick="backToSelfieStep()">
+          ← Back
+        </button>
+      </div>
+    </div>
+
+    <p style="font-size:0.72rem;color:var(--text-muted);margin-top:14px">
+      Your ID photo and selfie are only used to verify you're a real person creating this account.
+    </p>
+  </div>
+</div>
+
+<style>
+  .face-scan-frame {
+    position: relative;
+    width: 220px; height: 220px;
+    margin: 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--bg-input);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .face-scan-frame video,
+  .face-scan-frame img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* mirror, feels natural for a selfie */
+  }
+  .face-scan-ring {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 3px solid var(--accent-cyan);
+    box-shadow: 0 0 0 4px rgba(0,229,255,0.15);
+    pointer-events: none;
+  }
+  #faceScanIdleActions, #faceScanLiveActions, #faceScanReviewActions { display: none; }
+
+  .kyc-steps {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; margin: 4px 0 18px;
+  }
+  .kyc-step {
+    display: flex; flex-direction: column; align-items: center;
+    font-size: 0.68rem; color: var(--text-muted); gap: 4px;
+  }
+  .kyc-step span {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-input); border: 1px solid var(--border-color, rgba(255,255,255,0.15));
+    font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
+  }
+  .kyc-step.active span, .kyc-step.done span {
+    border-color: var(--accent-cyan); color: var(--accent-cyan);
+    box-shadow: 0 0 0 3px rgba(0,229,255,0.12);
+  }
+  .kyc-step.active, .kyc-step.done { color: var(--text-primary); }
+  .kyc-step.done span { background: var(--accent-cyan); color: var(--bg-dark); }
+  .kyc-step-line { width: 28px; height: 1px; background: var(--border-color, rgba(255,255,255,0.15)); margin-bottom: 14px; }
+
+  .id-scan-frame {
+    position: relative;
+    width: 100%; max-width: 320px; height: 190px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-input);
+    display: flex; align-items: center; justify-content: center;
+    border: 2px dashed rgba(255,255,255,0.15);
+  }
+  .id-scan-frame video, .id-scan-frame img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .id-scan-placeholder { color: var(--text-muted); font-size: 0.8rem; line-height: 1.8; }
+
+  .kyc-review-thumb {
+    width: 100px; height: 68px; border-radius: 8px; overflow: hidden;
+    background: var(--bg-input); border: 1px solid rgba(255,255,255,0.15);
+  }
+  .kyc-review-thumb.round { width: 68px; height: 68px; border-radius: 50%; margin: 0 auto; }
+  .kyc-review-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .kyc-review-caption { font-size: 0.68rem; color: var(--text-muted); margin-top: 6px; }
+  .kyc-review-summary {
+    text-align: left; font-size: 0.8rem; color: var(--text-secondary);
+    background: var(--bg-input); border-radius: 8px; padding: 10px 14px; margin-top: 8px;
+  }
+  .kyc-review-summary div { padding: 2px 0; }
+  .kyc-review-summary b { color: var(--text-primary); }
+</style>
+
+<script src="js/data.js"></script>
+<script src="js/ph-locations.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/notification.js"></script>
+<script src="js/navbar-template.js"></script>
+<script src="js/offers.js"></script>
+<script>
+  // Allow creating new accounts even while logged in
+  // (Just show a note if already logged in)
+  if (state.currentUser) {
+    const note = document.createElement('div');
+    note.style.cssText = 'background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);border-radius:8px;padding:10px 14px;font-size:0.82rem;color:var(--accent-cyan);margin-bottom:12px;text-align:center';
+    note.innerHTML = `ℹ️ You're logged in as <b>${state.currentUser.name}</b>. You can still create a new account below, or <a href="index.html" style="color:var(--accent-cyan)">go back home</a>.`;
+    document.querySelector('.auth-card').insertBefore(note, document.querySelector('.error-msg'));
+  }
+</script>
+</body>
+</html>

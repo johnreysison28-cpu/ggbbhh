@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Profile — GameBarterHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/notification.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/profile.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <style>
+    .user-profile-not-found {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--text-muted);
+    }
+    .user-profile-not-found .nf-icon { font-size: 4rem; margin-bottom: 16px; }
+    .user-profile-not-found h2 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1.8rem; font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .contact-btn-wrap {
+      margin-left: auto;
+      padding-bottom: 8px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      text-decoration: none;
+      margin-bottom: 20px;
+      transition: color 0.2s;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .back-link:hover { color: var(--accent-cyan); }
+  </style>
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5-g1bjXfgd1w9boHbfLX8EMnt6tr9yuM",
+      authDomain: "gbhub-25a16.firebaseapp.com",
+      projectId: "gbhub-25a16",
+      storageBucket: "gbhub-25a16.firebasestorage.app",
+      messagingSenderId: "1031854442872",
+      appId: "1:1031854442872:web:208bc4663cace89f43608d",
+      measurementId: "G-XV7WMV0Q82",
+      databaseURL: "https://gbhub-25a16-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  </script>
+</head>
+<body>
+
+<!-- Navbar injected by navbar-template.js -->
+
+<!-- ═══ TRADE DETAIL MODAL ═══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Trade Details</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="profile-wrapper">
+
+  <a href="javascript:history.back()" class="back-link">← Back</a>
+
+  <div id="profileContent">
+    <!-- Filled by JS -->
+  </div>
+
+</div>
+
+<!-- Edit Trade Overlay placeholder (needed by trades.js) -->
+<div id="editTradeOverlay" class="modal-overlay" onclick="if(event.target===this)closeEditTradeModal()"></div>
+
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/notification.js"></script>
+<script src="js/navbar-template.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/trades.js"></script>
+<script src="js/offers.js"></script>
+<script>
+  const urlParams   = new URLSearchParams(window.location.search);
+  const targetEmail = urlParams.get('u');
+
+  async function renderUserProfile() {
+    await restoreSession();
+    if (typeof startNotifListener === 'function') startNotifListener();
+    const content = document.getElementById('profileContent');
+
+    if (!targetEmail) {
+      content.innerHTML = `<div class="user-profile-not-found"><div class="nf-icon">🔍</div><h2>No user specified</h2></div>`;
+      return;
+    }
+
+    // If own profile, redirect
+    if (state.currentUser && state.currentUser.email === targetEmail) {
+      window.location.href = 'profile.html'; return;
+    }
+
+    try {
+      const user = await apiGet('/users/' + encodeURIComponent(targetEmail));
+      const userTrades = await apiGet('/trades/user/' + encodeURIComponent(targetEmail));
+      const totalLikes = userTrades.reduce((s, t) => s + (t.likes || 0), 0);
+
+      const avatarEl = user.avatar
+        ? `<img src="${user.avatar}" alt="" style="width:100%;height:100%;object-fit:cover">`
+        : user.name[0].toUpperCase();
+
+      const followBtn = state.currentUser
+        ? `<button id="followBtn" data-following="${user.isFollowedByMe ? 'true' : 'false'}"
+               onclick="toggleFollow('${user.uid}', this)"
+               style="font-size:0.82rem;padding:8px 20px;border-radius:var(--radius);cursor:pointer;font-family:inherit;font-weight:600;transition:all 0.2s;${user.isFollowedByMe
+                 ? 'background:rgba(0,229,255,0.15);color:var(--accent-cyan);border:1px solid var(--accent-cyan)'
+                 : 'background:var(--accent-cyan);color:#000;border:none'}">
+               ${user.isFollowedByMe ? '✔ Following' : '➕ Follow'}
+             </button>`
+        : `<a href="login.html" class="btn btn-ghost" style="font-size:0.82rem;padding:8px 18px">🔑 Login to Follow</a>`;
+
+      const contactBtn = state.currentUser
+        ? `<button class="btn btn-primary" style="font-size:0.82rem;padding:8px 18px"
+               onclick="openChatWith('${escapeHtml(user.uid)}','${escapeHtml(user.name)}',${user.avatar ? `'${escapeHtml(user.avatar)}'` : 'null'})">
+               💬 Message
+             </button>`
+        : '';
+
+      const joinDate = user.createdAt
+        ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+        : 'Unknown';
+
+      document.title = `${user.name} — GameBarterHub`;
+
+      content.innerHTML = `
+        <div class="profile-banner"></div>
+        <div class="profile-info">
+          <div class="profile-avatar-wrap">
+            <div class="profile-avatar">${avatarEl}</div>
+            <div style="padding-bottom:8px">
+              <div class="profile-name">${escapeHtml(user.name)}</div>
+              ${user.location ? `<div class="profile-loc">📍 ${escapeHtml(user.location)}</div>` : ''}
+              <div class="profile-loc" style="margin-top:2px">🗓️ Member since ${joinDate}</div>
+            </div>
+            <div class="contact-btn-wrap">${contactBtn}${followBtn}</div>
+          </div>
+          <div style="height:48px"></div>
+          <div class="profile-stats">
+            <div class="pstat"><div class="pstat-val">${userTrades.length}</div><div class="pstat-lbl">Trades</div></div>
+            <div class="pstat"><div class="pstat-val">${totalLikes}</div><div class="pstat-lbl">Total Likes</div></div>
+            <div class="pstat"><div class="pstat-val" id="followerCountDisplay">${user.followersCount || 0}</div><div class="pstat-lbl">Followers</div></div>
+            <div class="pstat"><div class="pstat-val">${user.followingCount || 0}</div><div class="pstat-lbl">Following</div></div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <div class="section-title">Trade Listings</div>
+          <div class="trades-grid">
+            ${userTrades.length
+              ? userTrades.map(t => tradeCardHTML(t)).join('')
+              : `<div class="empty-state"><div class="empty-state-icon">📦</div><p>No trades posted yet.</p></div>`}
+          </div>
+        </div>`;
+    } catch (e) {
+      content.innerHTML = `<div class="user-profile-not-found"><div class="nf-icon">👤</div><h2>User Not Found</h2><p>${e.message}</p><br><a href="browse.html" class="btn btn-ghost">Browse Trades</a></div>`;
+    }
+  }
+
+  renderUserProfile();
+</script>
+</body>
+</html>

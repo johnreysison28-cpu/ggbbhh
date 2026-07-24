@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GameBarterHub — Game Item Trading Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/notification.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <style>
+    /* ── HERO ── */
+    .hero {
+      padding: 80px 24px 60px;
+      max-width: 1200px; margin: 0 auto;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0,229,255,0.08);
+      border: 1px solid rgba(0,229,255,0.25);
+      padding: 6px 16px; border-radius: 40px;
+      font-size: 0.75rem; font-weight: 600;
+      color: var(--accent-cyan); letter-spacing: 1px;
+      text-transform: uppercase; margin-bottom: 28px;
+    }
+    .hero-badge::before {
+      content: ''; width: 6px; height: 6px;
+      background: var(--accent-green); border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+    .hero h1 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      font-weight: 700; line-height: 1.05;
+      margin-bottom: 20px; letter-spacing: -0.5px;
+    }
+    .hero h1 .line1 { color: var(--text-primary); }
+    .hero h1 .line2 {
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.1rem; color: var(--text-secondary);
+      max-width: 560px; margin: 0 auto 40px; line-height: 1.7;
+    }
+    .hero-search {
+      max-width: 480px; margin: 0 auto 28px; position: relative;
+    }
+    .hero-search input {
+      width: 100%; background: var(--bg-card);
+      border: 1px solid var(--border); border-radius: 28px;
+      padding: 14px 50px 14px 22px; font-family: 'Exo 2', sans-serif;
+      font-size: 0.95rem; color: var(--text-primary);
+      outline: none; transition: border-color 0.2s;
+    }
+    .hero-search input:focus { border-color: var(--accent-cyan); }
+    .hero-search input::placeholder { color: var(--text-muted); }
+    .hero-search button {
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      background: var(--accent-cyan); border: none; color: #04121a;
+      width: 38px; height: 38px; border-radius: 50%;
+      cursor: pointer; font-size: 1rem; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .hero-cta {
+      display: flex; gap: 12px; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 60px;
+    }
+    .hero-cta .btn { padding: 12px 28px; font-size: 0.95rem; }
+    .stats-row {
+      display: flex; gap: 48px; justify-content: center; flex-wrap: wrap;
+      border-top: 1px solid var(--border); padding-top: 40px;
+    }
+    .stat { text-align: center; }
+    .stat-val { font-family: 'Rajdhani', sans-serif; font-size: 2rem; font-weight: 700; color: var(--accent-cyan); }
+    .stat-lbl { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    @media (max-width: 768px) {
+      .hero { padding: 50px 16px 40px; }
+    }
+    @media (max-width: 480px) {
+      .stats-row { gap: 24px; }
+    }
+  </style>
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5-g1bjXfgd1w9boHbfLX8EMnt6tr9yuM",
+      authDomain: "gbhub-25a16.firebaseapp.com",
+      projectId: "gbhub-25a16",
+      storageBucket: "gbhub-25a16.firebasestorage.app",
+      messagingSenderId: "1031854442872",
+      appId: "1:1031854442872:web:208bc4663cace89f43608d",
+      measurementId: "G-XV7WMV0Q82",
+      databaseURL: "https://gbhub-25a16-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  </script>
+</head>
+<body>
+
+<!-- Navbar injected by navbar-template.js -->
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Trade Details</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Edit Trade Overlay -->
+<div id="editTradeOverlay" class="modal-overlay" onclick="if(event.target===this)closeEditTradeModal()"></div>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="hero-badge">🟢 Live Trading Platform</div>
+  <h1>
+    <div class="line1">Trade Your Way to</div>
+    <div class="line2">Gaming Glory</div>
+  </h1>
+  <p>Buy, sell, and trade in-game items, accounts, and resources with players. Secure, fast, and community-driven.</p>
+  <form class="hero-search" onsubmit="return submitHeroSearch(event)">
+    <input type="text" id="heroSearchInput" placeholder="Search for an item, account, or game…" autocomplete="off">
+    <button type="submit" aria-label="Search">🔍</button>
+  </form>
+  <div class="hero-cta">
+    <a href="browse.html" class="btn btn-primary">🎮 Browse Trades</a>
+    <a href="post-trade.html" class="btn btn-secondary" onclick="return checkLogin(this.href)">➕ Post a Trade</a>
+  </div>
+  <div class="stats-row">
+    <div class="stat"><div class="stat-val" id="statActiveTraders"></div><div class="stat-lbl"></div></div>
+    <div class="stat"><div class="stat-val" id="statTradesPosted">—</div><div class="stat-lbl">Trades Posted</div></div>
+    <div class="stat"><div class="stat-val" id="statGameCategories">20</div><div class="stat-lbl">Game Categories</div></div>
+  </div>
+</section>
+
+<!-- ═══ CATEGORIES ═══ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">Browse by Game</div>
+    <a href="browse.html" class="btn btn-ghost" style="font-size:0.8rem">View All →</a>
+  </div>
+  <div class="categories-grid" id="homeCats"></div>
+</div>
+
+<!-- ═══ LATEST TRADES ═══ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">Latest Trades</div>
+    <a href="browse.html" class="btn btn-ghost" style="font-size:0.8rem">See More →</a>
+  </div>
+  <div class="trades-grid" id="homeTradesGrid"></div>
+</div>
+
+<!-- ═══ SCRIPTS ═══ -->
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/notification.js"></script>
+<script src="js/navbar-template.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/trades.js"></script>
+<script src="js/offers.js"></script>
+<script>
+  function renderCategories() {
+    const catStatEl = document.getElementById('statGameCategories');
+    if (catStatEl) catStatEl.textContent = GAMES.length;
+    document.getElementById('homeCats').innerHTML = GAMES.map(g => {
+      const liveCount = state.trades.filter(t => t.game === g.id).length;
+      return `<a class="cat-card" href="browse.html?game=${g.id}">
+        <div class="cat-icon">${g.icon}</div>
+        <div class="cat-name">${g.name}</div>
+        <div class="cat-count">${liveCount.toLocaleString()} ${liveCount === 1 ? 'trade' : 'trades'}</div>
+      </a>`;
+    }).join('');
+  }
+
+  function renderLatestTrades() {
+    const recent = state.trades.slice(0, 6);
+    document.getElementById('homeTradesGrid').innerHTML =
+      recent.map(t => tradeCardHTML(t)).join('');
+    renderCategories();
+  }
+
+  // "Trades Posted" — total number of trades currently listed
+  function renderTradesPostedStat() {
+    const el = document.getElementById('statTradesPosted');
+    if (el) el.textContent = state.trades.length.toLocaleString() + '+';
+  }
+
+  // "Active Traders" — live count of users currently online, via
+  // Firebase Realtime Database presence (see js/data.js)
+  let _stopActiveTradersWatch = null;
+  function renderActiveTradersStat() {
+    const el = document.getElementById('statActiveTraders');
+    if (!el || typeof watchActiveTradersCount !== 'function') return;
+    _stopActiveTradersWatch = watchActiveTradersCount(count => {
+      el.textContent = count === null ? '—' : count.toLocaleString();
+    });
+  }
+
+  // Hero search — sends the user to Browse with the query prefilled
+  function submitHeroSearch(e) {
+    e.preventDefault();
+    const q = document.getElementById('heroSearchInput').value.trim();
+    window.location.href = q
+      ? `browse.html?q=${encodeURIComponent(q)}`
+      : 'browse.html';
+    return false;
+  }
+
+  // Load from API on page load
+  (async () => {
+    await loadTrades();
+    renderLatestTrades();
+    renderTradesPostedStat();
+    renderActiveTradersStat();
+  })();
+</script>
+</body>
+</html>

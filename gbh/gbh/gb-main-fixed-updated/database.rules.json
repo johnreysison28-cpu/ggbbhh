@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "presence": {
+      // Public read so the landing page can show a live "active traders"
+      // count even to signed-out visitors. Only online/lastSeen are stored
+      // here, no personal data, so this is safe to expose.
+      ".read": true,
+      "$uid": {
+        // Only the owning user can write their own presence
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['online', 'lastSeen'])"
+      }
+    }
+  }
+}
