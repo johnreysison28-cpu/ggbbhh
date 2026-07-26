@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Post a Trade — GameBarterHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/notification.css">
+  <link rel="stylesheet" href="css/support.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <style>
+    .post-wrapper {
+      max-width: 700px; margin: 0 auto;
+      padding: 40px 24px;
+    }
+    .post-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+    }
+    @media (max-width: 768px) {
+      .post-card { padding: 24px 16px; }
+    }
+  </style>
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5-g1bjXfgd1w9boHbfLX8EMnt6tr9yuM",
+      authDomain: "gbhub-25a16.firebaseapp.com",
+      projectId: "gbhub-25a16",
+      storageBucket: "gbhub-25a16.firebasestorage.app",
+      messagingSenderId: "1031854442872",
+      appId: "1:1031854442872:web:208bc4663cace89f43608d",
+      measurementId: "G-XV7WMV0Q82"
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  </script>
+</head>
+<body>
+
+<!-- Navbar injected by navbar-template.js -->
+
+<div class="post-wrapper">
+  <div class="section-title" style="margin-bottom:24px">Create Trade Post</div>
+
+  <div class="post-card">
+    <div class="error-msg" id="postError"></div>
+
+    <div class="form-group">
+      <label class="form-label">Game Category *</label>
+      <select class="form-input" id="postGame">
+        <option value="">Select a game...</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Post Title *</label>
+      <input class="form-input" id="postTitle" type="text"
+        placeholder="e.g. Selling Legendary Sword — Rank 90">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Description *</label>
+      <textarea class="form-input" id="postDesc" style="min-height:110px"
+        placeholder="Describe your item, account stats, what makes it valuable..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Trade Offer / Price</label>
+      <input class="form-input" id="postOffer" type="text"
+        placeholder="e.g. Looking for diamonds or PHP 500 GCash">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Post Image (Optional)</label>
+      <div class="post-img-upload" id="postImgUpload">
+        <div class="post-img-upload-icon">🖼️</div>
+        <p>Click to upload an image</p>
+        <p style="font-size:0.72rem;color:var(--text-muted)">PNG, JPG up to 5MB</p>
+        <input type="file" accept="image/*" id="postImgInput" onchange="previewPostImg(this)">
+        <img id="postImgPreviewEl" class="post-img-preview" style="display:none" alt="">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:8px">
+      <a href="index.html" class="btn btn-ghost" style="flex:1;text-align:center">Cancel</a>
+      <button class="btn btn-primary" onclick="doPost()" style="flex:2;padding:12px">
+        🚀 Post Trade
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/notification.js"></script>
+<script src="js/navbar-template.js"></script>
+<script src="js/support.js"></script>
+<script src="js/offers.js"></script>
+<script>
+  // Redirect if not logged in (session check happens after restoreSession)
+  document.addEventListener('DOMContentLoaded', async () => {
+    await restoreSession();
+    if (!state.currentUser) { window.location.href = 'login.html'; return; }
+
+    // Populate game dropdown
+    const sel = document.getElementById('postGame');
+    GAMES.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.icon + ' ' + g.name;
+      sel.appendChild(opt);
+    });
+  });
+
+  function previewPostImg(input) {
+    if (!input.files[0]) return;
+    const r = new FileReader();
+    r.onload = e => {
+      state.postImgDataURL = e.target.result;
+      const el = document.getElementById('postImgPreviewEl');
+      el.src = e.target.result; el.style.display = 'block';
+      document.querySelectorAll('#postImgUpload p').forEach(p => p.style.display = 'none');
+      const icon = document.querySelector('.post-img-upload-icon');
+      if (icon) icon.style.display = 'none';
+    };
+    r.readAsDataURL(input.files[0]);
+  }
+
+  async function doPost() {
+    const game  = val('postGame');
+    const title = val('postTitle').trim();
+    const desc  = val('postDesc').trim();
+    const offer = val('postOffer').trim();
+    const err   = document.getElementById('postError');
+    err.style.display = 'none';
+
+    if (!game)  return showErr(err, 'Please select a game category.');
+    if (!title) return showErr(err, 'Please enter a title.');
+    if (!desc)  return showErr(err, 'Please add a description.');
+
+    try {
+      await apiPost('/trades', {
+        game, title, desc, offer,
+        img: state.postImgDataURL || null,
+      });
+      state.postImgDataURL = null;
+      showToast('✅ Trade posted successfully!');
+      setTimeout(() => { window.location.href = 'browse.html'; }, 900);
+    } catch (e) {
+      showErr(err, e.message || 'Could not post trade.');
+    }
+  }
+</script>
+</body>
+</html>

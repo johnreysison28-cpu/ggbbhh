@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════
+   PROFILE.CSS — Profile Banner, Avatar, Stats
+═══════════════════════════════════════════════ */
+
+.profile-wrapper { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+
+.profile-banner {
+  height: 200px;
+  background: linear-gradient(135deg, #0f1422, #131828);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+.profile-banner::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(0,229,255,0.1), rgba(155,93,229,0.1));
+}
+
+.profile-info {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  padding: 0 28px 24px;
+  margin-bottom: 28px;
+}
+
+.profile-avatar-wrap {
+  display: flex; align-items: flex-end; gap: 20px;
+  position: relative;
+  top: -40px; margin-bottom: -24px;
+}
+
+.profile-avatar {
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  border: 4px solid var(--bg-card);
+  background: var(--bg-card2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700; color: var(--accent-cyan);
+  overflow: hidden; flex-shrink: 0;
+}
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.profile-name  { font-family: 'Rajdhani', sans-serif; font-size: 1.7rem; font-weight: 700; }
+.profile-loc   { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+.profile-email { font-size: 0.82rem; color: var(--text-muted); }
+#profileKycEl  { font-size: 0.78rem; color: #2ecc71; font-weight: 600; margin-top: 2px; }
+
+.profile-stats {
+  display: flex; gap: 32px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.pstat        { text-align: center; }
+.pstat-val    { font-family: 'Rajdhani', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--accent-cyan); }
+.pstat-lbl    { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .profile-stats { gap: 16px; }
+  .profile-info  { padding: 0 16px 20px; }
+}

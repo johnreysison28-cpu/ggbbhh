@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse Trades — GameBarterHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/notification.css">
+  <link rel="stylesheet" href="css/support.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <style>
+    .browse-header {
+      padding: 40px 24px 20px;
+      max-width: 1200px; margin: 0 auto;
+    }
+    .browse-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 2rem; font-weight: 700; margin-bottom: 6px;
+    }
+    .browse-subtitle { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 24px; }
+
+    .browse-search {
+      position: relative;
+      max-width: 420px;
+      margin-bottom: 20px;
+    }
+    .browse-search input {
+      width: 100%; background: var(--bg-input, var(--bg-card));
+      border: 1px solid var(--border); border-radius: 24px;
+      padding: 10px 40px 10px 16px; font-family: 'Exo 2', sans-serif;
+      font-size: 0.88rem; color: var(--text-primary);
+      outline: none; transition: border-color 0.2s;
+    }
+    .browse-search input:focus { border-color: var(--accent-cyan); }
+    .browse-search input::placeholder { color: var(--text-muted); }
+    .browse-search .search-icon {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none; font-size: 0.95rem;
+    }
+    .browse-search .search-clear {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 1rem; display: none; line-height: 1;
+      padding: 4px;
+    }
+    .browse-search .search-clear.show { display: block; }
+    .browse-results-note {
+      color: var(--text-muted); font-size: 0.8rem; margin: -12px 0 16px;
+    }
+    .browse-filter {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .filter-btn {
+      padding: 6px 16px; border-radius: 20px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      font-family: 'Exo 2', sans-serif;
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .filter-btn:hover,
+    .filter-btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: rgba(0,229,255,0.08);
+    }
+    @media (max-width: 768px) {
+      .browse-filter { gap: 6px; }
+      .filter-btn    { padding: 5px 12px; font-size: 0.72rem; }
+    }
+  </style>
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5-g1bjXfgd1w9boHbfLX8EMnt6tr9yuM",
+      authDomain: "gbhub-25a16.firebaseapp.com",
+      projectId: "gbhub-25a16",
+      storageBucket: "gbhub-25a16.firebasestorage.app",
+      messagingSenderId: "1031854442872",
+      appId: "1:1031854442872:web:208bc4663cace89f43608d",
+      measurementId: "G-XV7WMV0Q82",
+      databaseURL: "https://gbhub-25a16-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  </script>
+</head>
+<body>
+
+<!-- Navbar injected by navbar-template.js -->
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Trade Details</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Edit Trade Overlay -->
+<div id="editTradeOverlay" class="modal-overlay" onclick="if(event.target===this)closeEditTradeModal()"></div>
+
+<!-- ═══ PAGE CONTENT ═══ -->
+<div class="browse-header">
+  <div class="browse-title">Browse Trades</div>
+  <p class="browse-subtitle">Find the best items and accounts from our community</p>
+
+  <div class="browse-search">
+    <input type="text" id="browseSearchInput" placeholder="Search trades by title, item, or trader…"
+      oninput="onBrowseSearchInput(this.value)" autocomplete="off">
+    <span class="search-icon" id="browseSearchIcon">🔍</span>
+    <button class="search-clear" id="browseSearchClear" onclick="clearBrowseSearch()" aria-label="Clear search">✕</button>
+  </div>
+  <div class="browse-results-note" id="browseResultsNote" style="display:none"></div>
+
+  <div class="browse-filter" id="browseFilter"></div>
+</div>
+
+<div class="section" style="padding-top:0">
+  <div class="trades-grid" id="browseGrid">
+    <p style="color:var(--text-muted);padding:32px;text-align:center;grid-column:1/-1">Loading...</p>
+  </div>
+</div>
+
+<!-- ═══ SCRIPTS ═══ -->
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/notification.js"></script>
+<script src="js/navbar-template.js"></script>
+<script src="js/support.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/trades.js"></script>
+<script src="js/offers.js"></script>
+<script>
+  let currentFilter = 'all';
+  // Counts from the full unfiltered load (used for badges on filter buttons)
+  let _allGameCounts = {};
+
+  // ── Search ─────────────────────────────────
+  let searchQuery = '';        // active (debounced) query, lowercase
+  let _searchDebounceTimer = null;
+  let _allLoadedTrades = [];   // full set for the current category filter, before search narrows it
+
+  function _matchesSearch(t, q) {
+    if (!q) return true;
+    const haystack = [
+      t.title, t.desc, t.offer, t.user, t.gameName
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(q);
+  }
+
+  function applySearchFilter() {
+    state.trades = searchQuery
+      ? _allLoadedTrades.filter(t => _matchesSearch(t, searchQuery))
+      : _allLoadedTrades;
+    renderBrowseGrid();
+    renderResultsNote();
+  }
+
+  function renderResultsNote() {
+    const note = document.getElementById('browseResultsNote');
+    if (!searchQuery) { note.style.display = 'none'; return; }
+    note.style.display = 'block';
+    note.textContent = `${state.trades.length} result${state.trades.length === 1 ? '' : 's'} for "${searchQuery}"`;
+  }
+
+  function onBrowseSearchInput(value) {
+    document.getElementById('browseSearchClear').classList.toggle('show', value.length > 0);
+    clearTimeout(_searchDebounceTimer);
+    _searchDebounceTimer = setTimeout(() => {
+      searchQuery = value.trim().toLowerCase();
+      applySearchFilter();
+      const url = new URL(window.location.href);
+      if (searchQuery) { url.searchParams.set('q', searchQuery); }
+      else { url.searchParams.delete('q'); }
+      history.replaceState(null, '', url.toString());
+    }, 200);
+  }
+
+  function clearBrowseSearch() {
+    const input = document.getElementById('browseSearchInput');
+    input.value = '';
+    document.getElementById('browseSearchClear').classList.remove('show');
+    searchQuery = '';
+    applySearchFilter();
+    const url = new URL(window.location.href);
+    url.searchParams.delete('q');
+    history.replaceState(null, '', url.toString());
+    input.focus();
+  }
+
+  function renderFilters() {
+    document.getElementById('browseFilter').innerHTML =
+      `<button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">
+         All Games <span style="opacity:0.65;font-size:0.72em">(${Object.values(_allGameCounts).reduce((a,b)=>a+b,0)})</span>
+       </button>` +
+      GAMES.map(g => {
+        const cnt = _allGameCounts[g.id] || 0;
+        return `<button class="filter-btn ${currentFilter === g.id ? 'active' : ''}" onclick="setFilter('${g.id}')">
+          ${g.icon} ${g.name} ${cnt > 0 ? `<span style="opacity:0.65;font-size:0.72em">(${cnt})</span>` : ''}
+        </button>`;
+      }).join('');
+  }
+
+  function renderBrowseGrid() {
+    const grid = document.getElementById('browseGrid');
+    if (!state.trades.length) {
+      const msg = searchQuery
+        ? `No trades match "${searchQuery}". Try a different search or clear it.`
+        : 'No trades found in this category yet.';
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-state-icon">🔍</div>
+        <p>${msg}</p>
+      </div>`;
+      return;
+    }
+    grid.innerHTML = state.trades.map(t => tradeCardHTML(t)).join('');
+  }
+
+  async function setFilter(id) {
+    currentFilter = id;
+    // Show loading only in grid, not in filter bar
+    document.getElementById('browseGrid').innerHTML =
+      '<p style="color:var(--text-muted);padding:32px;text-align:center;grid-column:1/-1">Loading...</p>';
+    // Load only matching trades from Firestore (server-side filter)
+    await loadTrades(id === 'all' ? null : id);
+    _allLoadedTrades = state.trades;
+    renderFilters();
+    applySearchFilter(); // re-apply any active search on top of the new category, and renders the grid
+    // Update URL without reload so the filter is bookmarkable/shareable
+    const url = new URL(window.location.href);
+    if (id === 'all') { url.searchParams.delete('game'); }
+    else { url.searchParams.set('game', id); }
+    history.replaceState(null, '', url.toString());
+  }
+
+  // Build per-game counts from a full unfiltered load
+  async function buildGameCounts() {
+    const db = firebase.firestore();
+    const snap = await db.collection('trades').get();
+    _allGameCounts = {};
+    snap.docs.forEach(d => {
+      const g = d.data().game;
+      if (g) _allGameCounts[g] = (_allGameCounts[g] || 0) + 1;
+    });
+  }
+
+  // Initial page load
+  (async () => {
+    await restoreSession();
+    const params = new URLSearchParams(window.location.search);
+    const gameParam = params.get('game');
+    const tradeParam = params.get('trade');
+    const qParam = params.get('q');
+
+    if (gameParam && GAMES.find(g => g.id === gameParam)) {
+      currentFilter = gameParam;
+    }
+    if (qParam) {
+      searchQuery = qParam.trim().toLowerCase();
+      document.getElementById('browseSearchInput').value = qParam;
+      document.getElementById('browseSearchClear').classList.add('show');
+    }
+
+    // Build counts in background (non-blocking)
+    buildGameCounts().then(() => renderFilters());
+
+    // Load trades for the active filter
+    await loadTrades(currentFilter === 'all' ? null : currentFilter);
+    _allLoadedTrades = state.trades;
+    renderFilters();
+    applySearchFilter(); // applies any ?q= from the URL and renders the grid
+
+    // If opened via a shared link (?trade=xxx), open that trade modal
+    if (tradeParam) {
+      setTimeout(() => openTradeModal(tradeParam), 400);
+    }
+  })();
+</script>
+</body>
+</html>

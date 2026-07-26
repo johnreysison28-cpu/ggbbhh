@@ -1,0 +1,263 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // ── Admin check helper ───────────────────────────────
+    // A user is an admin if a doc with their uid exists in /admins.
+    // That collection is never writable by clients — admins must be
+    // added manually via the Firebase Console.
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ── Admins ────────────────────────────────────────────
+    match /admins/{adminId} {
+      allow read: if request.auth != null && request.auth.uid == adminId;
+      allow write: if false;
+    }
+
+     // ── Users ─────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if request.auth.uid == userId;
+      // Allow own profile updates, others updating followers array,
+      // and admins updating ONLY the verification-related fields.
+      allow update: if request.auth.uid == userId ||
+        (request.auth != null &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['followers', 'following'])) ||
+        (isAdmin() &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['verificationStatus', 'kycVerified', 'verifiedAt', 'verifiedBy', 'rejectionReason']));
+      allow delete: if false;
+    }
+    
+    // ── Face Verification (private — never publicly readable) ──
+    // Holds the raw selfie + ID capture from signup. Only the owning
+    // user, or an admin reviewing the submission, may read it.
+    match /faceVerifications/{userId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+     // ── Contact unlock records ──────────────────────────────
+    // A doc at contactUnlocks/{uidA_uidB} (uids sorted ascending, joined
+    // by "_") marks that two users have an accepted/completed trade
+    // together. It holds no personal data itself — its existence is
+    // just what the private-contact rule below checks. There's no
+    // server here, so the client creates it directly at accept-time,
+    // but only when a real tradeOffers doc backs up the claim.
+    function unlockBackedByRealOffer(offerId, pairId) {
+      let o = get(/databases/$(database)/documents/tradeOffers/$(offerId)).data;
+      return o.status in ['accepted', 'completed'] &&
+        pairId == (o.offererId < o.tradeOwnerId
+          ? o.offererId + '_' + o.tradeOwnerId
+          : o.tradeOwnerId + '_' + o.offererId);
+    }
+    match /contactUnlocks/{pairId} {
+      allow read: if request.auth != null &&
+        pairId.split('_').hasAny([request.auth.uid]);
+      allow create: if request.auth != null &&
+        pairId.split('_').hasAny([request.auth.uid]) &&
+        request.resource.data.offerId is string &&
+        unlockBackedByRealOffer(request.resource.data.offerId, pairId);
+      allow update, delete: if false;
+    }
+
+    // ── Private contact info (phone, dob) ───────────────────
+    // Never on the public users/{userId} doc. Readable only by the
+    // account owner, an admin, or someone who shares a confirmed trade
+    // with this user (checked via the contactUnlocks doc above).
+    match /users/{userId}/private/{docId} {
+      function pairKey() {
+        return request.auth.uid < userId
+          ? request.auth.uid + '_' + userId
+          : userId + '_' + request.auth.uid;
+      }
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || isAdmin() ||
+         exists(/databases/$(database)/documents/contactUnlocks/$(pairKey())));
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── Trades ────────────────────────────────────────────
+    match /trades/{tradeId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['likedBy', 'likes', 'commentCount', 'status'])
+      );
+      allow delete: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow delete: if request.auth != null &&
+          (request.auth.uid == resource.data.userId ||
+           get(/databases/$(database)/documents/trades/$(tradeId)).data.userId == request.auth.uid);
+        allow update: if request.auth != null &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likedBy', 'likes']);
+
+        match /replies/{replyId} {
+          allow read: if true;
+          allow create: if request.auth != null;
+          allow delete: if request.auth != null &&
+            (request.auth.uid == resource.data.userId ||
+             get(/databases/$(database)/documents/trades/$(tradeId)).data.userId == request.auth.uid);
+          allow update: if false;
+        }
+      }
+    }
+    
+    // ── Trade Offers (the actual "make an offer / accept / ──
+    // decline / cancel / complete" trade transaction flow) ──
+    match /tradeOffers/{offerId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.offererId ||
+         request.auth.uid == resource.data.tradeOwnerId);
+
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.offererId &&
+        request.resource.data.offererId != request.resource.data.tradeOwnerId &&
+        request.resource.data.status == 'pending';
+
+      // Either side of the trade may update it (accept/decline/cancel/
+      // complete), but the core identifying fields can never change.
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.offererId ||
+         request.auth.uid == resource.data.tradeOwnerId) &&
+        request.resource.data.offererId    == resource.data.offererId &&
+        request.resource.data.tradeOwnerId == resource.data.tradeOwnerId &&
+        request.resource.data.tradeId      == resource.data.tradeId;
+
+      allow delete: if false;
+    }
+
+
+    // ── Chats (1-on-1 real-time messaging) ───────────────
+    // chatId = sorted([uid1, uid2]).join('_')
+    match /chats/{chatId} {
+
+      allow read: if request.auth != null &&
+        request.auth.uid in resource.data.participants;
+
+      allow create: if request.auth != null &&
+        request.auth.uid in request.resource.data.participants &&
+        request.resource.data.participants.size() == 2;
+
+      allow update: if request.auth != null &&
+        request.auth.uid in resource.data.participants;
+
+      allow delete: if false;
+
+      // ── Messages sub-collection ──────────────────────
+      match /messages/{messageId} {
+
+        function participants() {
+          return get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        }
+
+        allow read: if request.auth != null &&
+          request.auth.uid in participants();
+
+        // A message needs either non-empty text, or an image (with an
+        // optional text caption). imageUrl is a base64 data URL, capped
+        // well under Firestore's 1MiB document limit.
+        allow create: if request.auth != null &&
+          request.auth.uid in participants() &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() <= 2000 &&
+          (request.resource.data.text.size() > 0 || 'imageUrl' in request.resource.data) &&
+          (
+            !('imageUrl' in request.resource.data) ||
+            (
+              request.resource.data.imageUrl is string &&
+              request.resource.data.imageUrl.size() > 0 &&
+              request.resource.data.imageUrl.size() < 1000000
+            )
+          );
+
+        // Only allow flipping read flag
+        allow update: if request.auth != null &&
+          request.auth.uid in participants() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+
+        allow delete: if false;
+      }
+    }
+
+    // ── Legacy conversations (backward compat) ────────────
+    match /conversations/{convoId} {
+      allow read: if request.auth != null &&
+        request.auth.uid in resource.data.userIds;
+      allow create: if request.auth != null &&
+        request.auth.uid in request.resource.data.userIds;
+      allow update: if request.auth != null &&
+        request.auth.uid in resource.data.userIds;
+
+      match /messages/{messageId} {
+        allow read: if request.auth != null &&
+          request.auth.uid in
+            get(/databases/$(database)/documents/conversations/$(convoId)).data.userIds;
+        allow create: if request.auth != null &&
+          request.auth.uid in
+            get(/databases/$(database)/documents/conversations/$(convoId)).data.userIds &&
+          request.resource.data.sender_id == request.auth.uid;
+        allow update: if request.auth != null &&
+          request.auth.uid in
+            get(/databases/$(database)/documents/conversations/$(convoId)).data.userIds;
+        allow delete: if false;
+      }
+    }
+    
+     // ── Support Tickets (customer service) ─────────────────
+    // A ticket may only be read/managed by the user who opened it, or
+    // by an admin. Users may only create tickets under their own uid;
+    // status/unread flags may be updated by either side.
+    match /supportTickets/{ticketId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.userId || isAdmin());
+
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId &&
+        request.resource.data.status == 'open';
+
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.userId || isAdmin()) &&
+        request.resource.data.userId == resource.data.userId;
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        function isTicketParticipant() {
+          let t = get(/databases/$(database)/documents/supportTickets/$(ticketId)).data;
+          return request.auth.uid == t.userId || isAdmin();
+        }
+
+        allow read: if request.auth != null && isTicketParticipant();
+
+        allow create: if request.auth != null && isTicketParticipant() &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 2000;
+
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Notifications ──────────────────────────────────────
+    match /notifications/{notifId} {
+      allow read, update, delete: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+    }
+  }
+}

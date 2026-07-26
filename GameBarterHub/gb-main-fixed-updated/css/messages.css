@@ -1,0 +1,145 @@
+/* ═══════════════════════════════════════════════
+   MESSAGES.CSS — Chat Layout, Bubbles, Sidebar
+═══════════════════════════════════════════════ */
+
+.messages-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  height: calc(100vh - 64px);
+  max-width: 1200px; margin: 0 auto;
+}
+
+/* ── SIDEBAR ── */
+.msg-sidebar {
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  background: var(--bg-card);
+}
+
+.msg-sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.2rem; font-weight: 700;
+}
+
+.msg-search {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.msg-list { overflow-y: auto; flex: 1; }
+
+.msg-contact {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer; transition: background 0.2s;
+  border-bottom: 1px solid rgba(0,229,255,0.05);
+  position: relative;
+}
+.msg-contact:hover  { background: rgba(0,229,255,0.05); }
+.msg-contact.active { background: rgba(0,229,255,0.08); }
+
+.msg-contact-info       { flex: 1; min-width: 0; }
+.msg-contact-name       { font-size: 0.88rem; font-weight: 600; margin-bottom: 3px; }
+.msg-contact-preview    { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-contact-time       { font-size: 0.7rem; color: var(--text-muted); flex-shrink: 0; }
+
+.msg-unread {
+  position: absolute; top: 12px; right: 16px;
+  width: 18px; height: 18px;
+  background: var(--accent-cyan);
+  border-radius: 50%;
+  font-size: 0.65rem; font-weight: 700; color: #000;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── CHAT AREA ── */
+.chat-area {
+  display: flex; flex-direction: column;
+  background: var(--bg-dark);
+}
+
+.chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-card);
+}
+
+.chat-messages {
+  flex: 1; overflow-y: auto;
+  padding: 24px 20px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.chat-msg {
+  display: flex; gap: 10px; max-width: 75%;
+}
+.chat-msg.sent { margin-left: auto; flex-direction: row-reverse; }
+
+.chat-bubble {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.875rem; line-height: 1.5;
+}
+.chat-msg.received .chat-bubble {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: 14px 14px 14px 2px;
+  color: var(--text-primary);
+}
+.chat-msg.sent .chat-bubble {
+  background: rgba(0,229,255,0.15);
+  border: 1px solid rgba(0,229,255,0.3);
+  border-radius: 14px 14px 2px 14px;
+  color: var(--text-primary);
+}
+
+.chat-msg-time { font-size: 0.68rem; color: var(--text-muted); margin-top: 4px; text-align: right; }
+
+.chat-input-area {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 12px; align-items: flex-end;
+  background: var(--bg-card);
+}
+
+.chat-input {
+  flex: 1; padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  color: var(--text-primary);
+  font-family: 'Exo 2', sans-serif;
+  font-size: 0.9rem;
+  outline: none; resize: none;
+  max-height: 120px; overflow-y: auto;
+  transition: border-color 0.2s;
+}
+.chat-input:focus { border-color: var(--accent-cyan); }
+
+.chat-send {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; transition: all 0.2s;
+  flex-shrink: 0;
+}
+.chat-send:hover { background: #00cfee; transform: scale(1.05); }
+
+.chat-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: var(--text-muted); gap: 12px;
+}
+.chat-empty-icon { font-size: 3rem; }
+.chat-empty p    { font-size: 0.9rem; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .messages-layout { grid-template-columns: 1fr; }
+  .msg-sidebar { height: 280px; border-right: none; border-bottom: 1px solid var(--border); }
+}
